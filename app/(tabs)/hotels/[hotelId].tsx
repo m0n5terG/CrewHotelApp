@@ -1,13 +1,16 @@
+import { useNavigation } from "@react-navigation/native";
 import { useLocalSearchParams } from "expo-router";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Animated,
   Dimensions,
   Image,
   Linking,
-  ScrollView,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -17,10 +20,9 @@ const { width } = Dimensions.get("window");
 
 export default function HotelDetails() {
   const { hotelId } = useLocalSearchParams();
+  const navigation = useNavigation();
 
   const scrollY = useRef(new Animated.Value(0)).current;
-  const carouselRef = useRef<ScrollView>(null);
-
   const [activeIndex, setActiveIndex] = useState(0);
 
   const hotel = {
@@ -40,57 +42,62 @@ export default function HotelDetails() {
     ],
   };
 
+  // ✅ Header title
+  useEffect(() => {
+    navigation.setOptions({
+      title: `${hotel.city} - ${hotel.name}`,
+    });
+  }, [hotel.city, hotel.name, navigation]);
+
+  // ✅ Header collapse
   const headerHeight = scrollY.interpolate({
-    inputRange: [0, 180],
-    outputRange: [260, 110],
+    inputRange: [0, 200],
+    outputRange: [260, 100],
     extrapolate: "clamp",
   });
 
-  const handleCarouselScroll = (event: any) => {
+  // ✅ Carousel scroll
+  const handleCarouselScroll = (
+    event: NativeSyntheticEvent<NativeScrollEvent>,
+  ) => {
     const index = Math.round(event.nativeEvent.contentOffset.x / width);
-
-    if (index >= hotel.photos.length) {
-      carouselRef.current?.scrollTo({ x: 0, animated: false });
-      setActiveIndex(0);
-    } else {
-      setActiveIndex(index);
-    }
+    setActiveIndex(index);
   };
 
   const openMap = () => {
-    const query = encodeURIComponent(hotel.address);
+    const query = encodeURIComponent(`${hotel.name}, ${hotel.address}`);
     Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${query}`);
   };
 
   return (
     <View style={{ flex: 1 }}>
-      {/* COLLAPSING HEADER */}
-      <Animated.View
-        style={[styles.headerImageContainer, { height: headerHeight }]}
-      >
-        <ScrollView
-          ref={carouselRef}
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          onScroll={handleCarouselScroll}
-          scrollEventThrottle={16}
-        >
-          {hotel.photos.map((photo, index) => (
-            <Image key={index} source={{ uri: photo }} style={styles.image} />
-          ))}
-        </ScrollView>
-      </Animated.View>
-
-      {/* CONTENT */}
       <Animated.ScrollView
-        style={styles.container}
+        scrollEventThrottle={16}
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
           { useNativeDriver: false },
         )}
-        scrollEventThrottle={16}
       >
+        {/* HEADER CAROUSEL */}
+        <Animated.View
+          style={[styles.headerImageContainer, { height: headerHeight }]}
+        >
+          <Animated.ScrollView
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onScroll={handleCarouselScroll}
+            scrollEventThrottle={16}
+            decelerationRate="fast"
+          >
+            {hotel.photos.map((photo, index) => (
+              <Image key={index} source={{ uri: photo }} style={styles.image} />
+            ))}
+          </Animated.ScrollView>
+
+          <View style={styles.overlay} />
+        </Animated.View>
+
         {/* DOTS */}
         <View style={styles.dots}>
           {hotel.photos.map((_, index) => (
@@ -101,7 +108,7 @@ export default function HotelDetails() {
           ))}
         </View>
 
-        {/* HEADER */}
+        {/* HEADER INFO */}
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
             <Text style={styles.hotelName}>{hotel.name}</Text>
@@ -114,7 +121,7 @@ export default function HotelDetails() {
           </View>
         </View>
 
-        {/* MAP PREVIEW */}
+        {/* MAP */}
         <View style={styles.mapContainer}>
           <MapView
             style={styles.map}
@@ -148,17 +155,45 @@ export default function HotelDetails() {
           <Text style={styles.item}>• 7-Eleven (2 min)</Text>
           <Text style={styles.item}>• Metro (5 min)</Text>
         </View>
+
+        {/* COMMENTS */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Comments</Text>
+
+          <View style={styles.commentBox}>
+            <Text style={styles.commentUser}>User1234</Text>
+            <Text style={styles.commentText}>
+              Great location and very clean 👍
+            </Text>
+          </View>
+
+          <View style={styles.commentBox}>
+            <Text style={styles.commentUser}>User5678</Text>
+            <Text style={styles.commentText}>
+              Rooms are small but convenient.
+            </Text>
+          </View>
+        </View>
+
+        {/* ADD COMMENT */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Add Comment</Text>
+
+          <TextInput
+            placeholder="Share your experience..."
+            style={styles.input}
+          />
+
+          <TouchableOpacity style={styles.mapButton}>
+            <Text style={styles.mapButtonText}>Post</Text>
+          </TouchableOpacity>
+        </View>
       </Animated.ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-
   headerImageContainer: {
     width: "100%",
     overflow: "hidden",
@@ -167,6 +202,11 @@ const styles = StyleSheet.create({
   image: {
     width: width,
     height: 260,
+  },
+
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.25)",
   },
 
   dots: {
@@ -194,21 +234,9 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
 
-  hotelName: {
-    fontSize: 24,
-    fontWeight: "700",
-  },
-
-  city: {
-    fontSize: 16,
-    color: "#666",
-  },
-
-  address: {
-    fontSize: 14,
-    color: "#888",
-    marginTop: 4,
-  },
+  hotelName: { fontSize: 24, fontWeight: "700" },
+  city: { fontSize: 16, color: "#666" },
+  address: { fontSize: 14, color: "#888", marginTop: 4 },
 
   discount: {
     backgroundColor: "#007AFF",
@@ -218,15 +246,9 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
   },
 
-  discountText: {
-    color: "#fff",
-    fontWeight: "600",
-  },
+  discountText: { color: "#fff", fontWeight: "600" },
 
-  mapContainer: {
-    marginHorizontal: 20,
-    marginBottom: 20,
-  },
+  mapContainer: { marginHorizontal: 20, marginBottom: 20 },
 
   map: {
     width: "100%",
@@ -261,5 +283,29 @@ const styles = StyleSheet.create({
   item: {
     fontSize: 15,
     marginBottom: 4,
+  },
+
+  commentBox: {
+    backgroundColor: "#f5f5f5",
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 10,
+  },
+
+  commentUser: {
+    fontWeight: "600",
+    marginBottom: 4,
+  },
+
+  commentText: {
+    color: "#444",
+  },
+
+  input: {
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 10,
   },
 });

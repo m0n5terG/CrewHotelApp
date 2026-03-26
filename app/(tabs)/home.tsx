@@ -1,5 +1,12 @@
 import HotelCard from "@/components/HotelCard";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { Link } from "expo-router";
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 const newHotels = [
   {
@@ -37,29 +44,41 @@ const updatedHotels = [
 
 export default function HomeScreen() {
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Newly Added Hotels */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Newly Added</Text>
+    <View style={{ flex: 1 }}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+      >
+        {/* Newly Added Hotels */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Newly Added</Text>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {newHotels.map((hotel) => (
-            <HotelCard key={hotel.id} hotel={hotel} />
-          ))}
-        </ScrollView>
-      </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {newHotels.map((hotel) => (
+              <HotelCard key={hotel.id} hotel={hotel} />
+            ))}
+          </ScrollView>
+        </View>
 
-      {/* Recently Updated Hotels */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Recently Updated</Text>
+        {/* Recently Updated Hotels */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Recently Updated</Text>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {updatedHotels.map((hotel) => (
-            <HotelCard key={hotel.id} hotel={hotel} />
-          ))}
-        </ScrollView>
-      </View>
-    </ScrollView>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {updatedHotels.map((hotel) => (
+              <HotelCard key={hotel.id} hotel={hotel} />
+            ))}
+          </ScrollView>
+        </View>
+      </ScrollView>
+
+      {/* ➕ FLOATING ADD BUTTON */}
+      <Link href="/(tabs)/add-hotel" asChild>
+        <TouchableOpacity style={styles.fab}>
+          <Text style={styles.fabText}>＋</Text>
+        </TouchableOpacity>
+      </Link>
+    </View>
   );
 }
 
@@ -70,6 +89,7 @@ const styles = StyleSheet.create({
 
   content: {
     padding: 20,
+    paddingBottom: 100, // space for floating button
   },
 
   section: {
@@ -80,5 +100,33 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: "700",
     marginBottom: 14,
+  },
+
+  /* 🔥 FLOATING BUTTON */
+  fab: {
+    position: "absolute",
+    bottom: 30,
+    right: 20,
+    backgroundColor: "#007AFF",
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: "center",
+    alignItems: "center",
+
+    // shadow (iOS)
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 3 },
+
+    // elevation (Android)
+    elevation: 6,
+  },
+
+  fabText: {
+    color: "#fff",
+    fontSize: 30,
+    lineHeight: 30,
   },
 });
